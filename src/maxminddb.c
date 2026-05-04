@@ -518,7 +518,7 @@ static const uint8_t *find_metadata(const uint8_t *file_content,
         }
     } while (NULL != tmp);
 
-    if (search_area == start) {
+    if (search_area == start || max_size <= 0) {
         return NULL;
     }
 
@@ -926,9 +926,16 @@ MMDB_lookup_result_s MMDB_lookup_sockaddr(const MMDB_s *const mmdb,
 
     uint8_t mapped_address[16];
     uint8_t const *address;
+    // Reject families other than AF_INET/AF_INET6 before casting to
+    // sockaddr_in/sockaddr_in6, which would otherwise read past the
+    // truncated struct sockaddr the caller passed in.
     if (mmdb->metadata.ip_version == 4) {
         if (sockaddr->sa_family == AF_INET6) {
             *mmdb_error = MMDB_IPV6_LOOKUP_IN_IPV4_DATABASE_ERROR;
+            return result;
+        }
+        if (sockaddr->sa_family != AF_INET) {
+            *mmdb_error = MMDB_INVALID_NETWORK_ADDRESS_ERROR;
             return result;
         }
         address = (uint8_t const *)&((struct sockaddr_in const *)sockaddr)
@@ -937,12 +944,15 @@ MMDB_lookup_result_s MMDB_lookup_sockaddr(const MMDB_s *const mmdb,
         if (sockaddr->sa_family == AF_INET6) {
             address = (uint8_t const *)&((struct sockaddr_in6 const *)sockaddr)
                           ->sin6_addr.s6_addr;
-        } else {
+        } else if (sockaddr->sa_family == AF_INET) {
             address = mapped_address;
             memset(mapped_address, 0, 12);
             memcpy(mapped_address + 12,
                    &((struct sockaddr_in const *)sockaddr)->sin_addr.s_addr,
                    4);
+        } else {
+            *mmdb_error = MMDB_INVALID_NETWORK_ADDRESS_ERROR;
+            return result;
         }
     }
 
@@ -990,12 +1000,12 @@ static int find_address_in_search_tree(const MMDB_s *const mmdb,
 
     result->netmask = current_bit;
 
-    if (value >= (uint64_t)node_count + mmdb->data_section_size) {
-        // The pointer points off the end of the database.
+    uint8_t type = record_type(mmdb, value);
+    if (type == MMDB_RECORD_TYPE_INVALID) {
         return MMDB_CORRUPT_SEARCH_TREE_ERROR;
     }
 
-    if (value == node_count) {
+    if (type == MMDB_RECORD_TYPE_EMPTY) {
         // record is empty
         result->found_entry = false;
         return MMDB_SUCCESS;
@@ -1083,7 +1093,14 @@ static uint8_t record_type(const MMDB_s *const mmdb, uint64_t record) {
         return MMDB_RECORD_TYPE_EMPTY;
     }
 
-    if (record - node_count < mmdb->data_section_size) {
+    uint64_t data_offset = record - node_count;
+    if (data_offset < MMDB_DATA_SECTION_SEPARATOR) {
+        DEBUG_MSG("record points into the data section separator");
+        return MMDB_RECORD_TYPE_INVALID;
+    }
+
+    data_offset -= MMDB_DATA_SECTION_SEPARATOR;
+    if (data_offset < mmdb->data_section_size) {
         return MMDB_RECORD_TYPE_DATA;
     }
 
@@ -1125,6 +1142,11 @@ int MMDB_read_node(const MMDB_s *const mmdb,
 
     node->left_record_type = record_type(mmdb, node->left_record);
     node->right_record_type = record_type(mmdb, node->right_record);
+
+    if (node->left_record_type == MMDB_RECORD_TYPE_INVALID ||
+        node->right_record_type == MMDB_RECORD_TYPE_INVALID) {
+        return MMDB_CORRUPT_SEARCH_TREE_ERROR;
+    }
 
     // Note that offset will be invalid if the record type is not
     // MMDB_RECORD_TYPE_DATA, but that's ok. Any use of the record entry
@@ -1420,6 +1442,13 @@ static int decode_one(const MMDB_s *const mmdb,
                       uint32_t offset,
                       MMDB_entry_data_s *entry_data) {
     const uint8_t *mem = mmdb->data_section;
+
+    if (mmdb->data_section_size == 0) {
+        // decode_one is also called with a fake mmdb whose data_section
+        // points at the metadata; either way an empty section is invalid.
+        DEBUG_MSG("decode_one called with an empty section");
+        return MMDB_INVALID_DATA_ERROR;
+    }
 
     // We subtract rather than add as it possible that offset + 1
     // could overflow for a corrupt database while an underflow
@@ -2254,6 +2283,9 @@ const char *MMDB_strerror(int error_code) {
         case MMDB_IPV6_LOOKUP_IN_IPV4_DATABASE_ERROR:
             return "You attempted to look up an IPv6 address in an IPv4-only "
                    "database";
+        case MMDB_INVALID_NETWORK_ADDRESS_ERROR:
+            return "The sockaddr family is unsupported; only AF_INET and "
+                   "AF_INET6 are accepted";
         default:
             return "Unknown error code";
     }

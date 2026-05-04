@@ -393,6 +393,8 @@ status codes are:
   array index larger than an array or smaller than the minimum offset from the
   end of an array. It can also happen when the path expects to find a map or
   array where none exist.
+- `MMDB_INVALID_NETWORK_ADDRESS_ERROR` - `MMDB_lookup_sockaddr()` was given a
+  `sockaddr` whose family is neither `AF_INET` nor `AF_INET6`.
 
 All status codes should be treated as `int` values.
 
@@ -518,7 +520,8 @@ MMDB_lookup_result_s MMDB_lookup_sockaddr(
 ```
 
 This function looks up an IP address that has already been resolved by
-`getaddrinfo()`.
+`getaddrinfo()`. The `sockaddr` passed to this function must be an `AF_INET` or
+`AF_INET6` address.
 
 Other than not calling `getaddrinfo()` itself, this function is identical to the
 `MMDB_lookup_string()` function.
@@ -770,7 +773,11 @@ to an `MMDB_search_node_s` structure that will be populated by this function.
 
 The return value is a status code. If you pass a `node_number` that is greater
 than or equal to the number of nodes in the database, this function will return
-`MMDB_INVALID_NODE_NUMBER_ERROR`, otherwise it will return `MMDB_SUCCESS`.
+`MMDB_INVALID_NODE_NUMBER_ERROR`. If the node's child records are invalid or
+point outside the search tree or data section, it will return
+`MMDB_CORRUPT_SEARCH_TREE_ERROR`. Otherwise it will return `MMDB_SUCCESS`. On
+any non-`MMDB_SUCCESS` return the contents of `*node` are unspecified and must
+not be read.
 
 The first node in the search tree is always node 0. If you wanted to iterate
 over the whole search tree, you would start by reading node 0 and then following

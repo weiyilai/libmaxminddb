@@ -1,3 +1,20 @@
+## next release
+
+- Fixed an out-of-bounds read in `MMDB_lookup_sockaddr()` when callers passed a
+  `sockaddr` with an unsupported address family. The function now rejects any
+  family other than `AF_INET` and `AF_INET6` with
+  `MMDB_INVALID_NETWORK_ADDRESS_ERROR`.
+- Fixed metadata parsing for files that end immediately after the
+  `\xAB\xCD\xEFMaxMind.com` marker. Such files are now rejected as invalid
+  metadata instead of allowing a zero-length metadata section to reach the
+  decoder.
+- Fixed search-tree validation for records that point into the 16-byte separator
+  before the data section. These records are now rejected as corrupt instead of
+  being exposed as apparent data entries with underflowed offsets.
+- `MMDB_read_node()` now returns `MMDB_CORRUPT_SEARCH_TREE_ERROR` instead of
+  `MMDB_SUCCESS` with `MMDB_RECORD_TYPE_INVALID` record types when a node's
+  child record is invalid.
+
 ## 1.13.3 - 2026-03-05
 
 - Fixed validation of empty maps and arrays at the end of the metadata section.
