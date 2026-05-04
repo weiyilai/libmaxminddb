@@ -1000,12 +1000,12 @@ static int find_address_in_search_tree(const MMDB_s *const mmdb,
 
     result->netmask = current_bit;
 
-    if (value >= (uint64_t)node_count + mmdb->data_section_size) {
-        // The pointer points off the end of the database.
+    uint8_t type = record_type(mmdb, value);
+    if (type == MMDB_RECORD_TYPE_INVALID) {
         return MMDB_CORRUPT_SEARCH_TREE_ERROR;
     }
 
-    if (value == node_count) {
+    if (type == MMDB_RECORD_TYPE_EMPTY) {
         // record is empty
         result->found_entry = false;
         return MMDB_SUCCESS;
@@ -1093,7 +1093,14 @@ static uint8_t record_type(const MMDB_s *const mmdb, uint64_t record) {
         return MMDB_RECORD_TYPE_EMPTY;
     }
 
-    if (record - node_count < mmdb->data_section_size) {
+    uint64_t data_offset = record - node_count;
+    if (data_offset < MMDB_DATA_SECTION_SEPARATOR) {
+        DEBUG_MSG("record points into the data section separator");
+        return MMDB_RECORD_TYPE_INVALID;
+    }
+
+    data_offset -= MMDB_DATA_SECTION_SEPARATOR;
+    if (data_offset < mmdb->data_section_size) {
         return MMDB_RECORD_TYPE_DATA;
     }
 

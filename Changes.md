@@ -8,6 +8,9 @@
   `\xAB\xCD\xEFMaxMind.com` marker. Such files are now rejected as invalid
   metadata instead of allowing a zero-length metadata section to reach the
   decoder.
+- Fixed search-tree validation for records that point into the 16-byte separator
+  before the data section. These records are now rejected as corrupt instead of
+  being exposed as apparent data entries with underflowed offsets.
 
 ## 1.13.3 - 2026-03-05
 
