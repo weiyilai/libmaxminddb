@@ -32,6 +32,7 @@ if(UNIX)  # or if (NOT WIN32)
     bad_epoch_t
     bad_indent_t
     empty_container_metadata_t
+    invalid_sockaddr_t
     max_depth_t
     threads_t
   )

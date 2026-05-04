@@ -926,9 +926,16 @@ MMDB_lookup_result_s MMDB_lookup_sockaddr(const MMDB_s *const mmdb,
 
     uint8_t mapped_address[16];
     uint8_t const *address;
+    // Reject families other than AF_INET/AF_INET6 before casting to
+    // sockaddr_in/sockaddr_in6, which would otherwise read past the
+    // truncated struct sockaddr the caller passed in.
     if (mmdb->metadata.ip_version == 4) {
         if (sockaddr->sa_family == AF_INET6) {
             *mmdb_error = MMDB_IPV6_LOOKUP_IN_IPV4_DATABASE_ERROR;
+            return result;
+        }
+        if (sockaddr->sa_family != AF_INET) {
+            *mmdb_error = MMDB_INVALID_NETWORK_ADDRESS_ERROR;
             return result;
         }
         address = (uint8_t const *)&((struct sockaddr_in const *)sockaddr)
@@ -937,12 +944,15 @@ MMDB_lookup_result_s MMDB_lookup_sockaddr(const MMDB_s *const mmdb,
         if (sockaddr->sa_family == AF_INET6) {
             address = (uint8_t const *)&((struct sockaddr_in6 const *)sockaddr)
                           ->sin6_addr.s6_addr;
-        } else {
+        } else if (sockaddr->sa_family == AF_INET) {
             address = mapped_address;
             memset(mapped_address, 0, 12);
             memcpy(mapped_address + 12,
                    &((struct sockaddr_in const *)sockaddr)->sin_addr.s_addr,
                    4);
+        } else {
+            *mmdb_error = MMDB_INVALID_NETWORK_ADDRESS_ERROR;
+            return result;
         }
     }
 
@@ -2254,6 +2264,9 @@ const char *MMDB_strerror(int error_code) {
         case MMDB_IPV6_LOOKUP_IN_IPV4_DATABASE_ERROR:
             return "You attempted to look up an IPv6 address in an IPv4-only "
                    "database";
+        case MMDB_INVALID_NETWORK_ADDRESS_ERROR:
+            return "The sockaddr family is unsupported; only AF_INET and "
+                   "AF_INET6 are accepted";
         default:
             return "Unknown error code";
     }

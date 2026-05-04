@@ -393,6 +393,8 @@ status codes are:
   array index larger than an array or smaller than the minimum offset from the
   end of an array. It can also happen when the path expects to find a map or
   array where none exist.
+- `MMDB_INVALID_NETWORK_ADDRESS_ERROR` - `MMDB_lookup_sockaddr()` was given a
+  `sockaddr` whose family is neither `AF_INET` nor `AF_INET6`.
 
 All status codes should be treated as `int` values.
 
@@ -518,7 +520,8 @@ MMDB_lookup_result_s MMDB_lookup_sockaddr(
 ```
 
 This function looks up an IP address that has already been resolved by
-`getaddrinfo()`.
+`getaddrinfo()`. The `sockaddr` passed to this function must be an `AF_INET` or
+`AF_INET6` address.
 
 Other than not calling `getaddrinfo()` itself, this function is identical to the
 `MMDB_lookup_string()` function.

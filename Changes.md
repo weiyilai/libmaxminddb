@@ -1,3 +1,10 @@
+## next release
+
+- Fixed an out-of-bounds read in `MMDB_lookup_sockaddr()` when callers passed a
+  `sockaddr` with an unsupported address family. The function now rejects any
+  family other than `AF_INET` and `AF_INET6` with
+  `MMDB_INVALID_NETWORK_ADDRESS_ERROR`.
+
 ## 1.13.3 - 2026-03-05
 
 - Fixed validation of empty maps and arrays at the end of the metadata section.
