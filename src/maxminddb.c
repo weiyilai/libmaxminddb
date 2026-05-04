@@ -518,7 +518,7 @@ static const uint8_t *find_metadata(const uint8_t *file_content,
         }
     } while (NULL != tmp);
 
-    if (search_area == start) {
+    if (search_area == start || max_size <= 0) {
         return NULL;
     }
 
@@ -1430,6 +1430,13 @@ static int decode_one(const MMDB_s *const mmdb,
                       uint32_t offset,
                       MMDB_entry_data_s *entry_data) {
     const uint8_t *mem = mmdb->data_section;
+
+    if (mmdb->data_section_size == 0) {
+        // decode_one is also called with a fake mmdb whose data_section
+        // points at the metadata; either way an empty section is invalid.
+        DEBUG_MSG("decode_one called with an empty section");
+        return MMDB_INVALID_DATA_ERROR;
+    }
 
     // We subtract rather than add as it possible that offset + 1
     // could overflow for a corrupt database while an underflow

@@ -17,6 +17,7 @@ set(TEST_TARGET_NAMES
   get_value_t
   ipv4_start_cache_t
   ipv6_lookup_in_ipv4_t
+  metadata_marker_t
   metadata_pointers_t
   metadata_t
   no_map_get_value_t

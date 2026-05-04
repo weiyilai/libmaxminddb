@@ -4,6 +4,10 @@
   `sockaddr` with an unsupported address family. The function now rejects any
   family other than `AF_INET` and `AF_INET6` with
   `MMDB_INVALID_NETWORK_ADDRESS_ERROR`.
+- Fixed metadata parsing for files that end immediately after the
+  `\xAB\xCD\xEFMaxMind.com` marker. Such files are now rejected as invalid
+  metadata instead of allowing a zero-length metadata section to reach the
+  decoder.
 
 ## 1.13.3 - 2026-03-05
 
