@@ -11,6 +11,9 @@
 - Fixed search-tree validation for records that point into the 16-byte separator
   before the data section. These records are now rejected as corrupt instead of
   being exposed as apparent data entries with underflowed offsets.
+- `MMDB_read_node()` now returns `MMDB_CORRUPT_SEARCH_TREE_ERROR` instead of
+  `MMDB_SUCCESS` with `MMDB_RECORD_TYPE_INVALID` record types when a node's
+  child record is invalid.
 
 ## 1.13.3 - 2026-03-05
 

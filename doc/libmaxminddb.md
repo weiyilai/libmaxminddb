@@ -773,7 +773,11 @@ to an `MMDB_search_node_s` structure that will be populated by this function.
 
 The return value is a status code. If you pass a `node_number` that is greater
 than or equal to the number of nodes in the database, this function will return
-`MMDB_INVALID_NODE_NUMBER_ERROR`, otherwise it will return `MMDB_SUCCESS`.
+`MMDB_INVALID_NODE_NUMBER_ERROR`. If the node's child records are invalid or
+point outside the search tree or data section, it will return
+`MMDB_CORRUPT_SEARCH_TREE_ERROR`. Otherwise it will return `MMDB_SUCCESS`. On
+any non-`MMDB_SUCCESS` return the contents of `*node` are unspecified and must
+not be read.
 
 The first node in the search tree is always node 0. If you wanted to iterate
 over the whole search tree, you would start by reading node 0 and then following

@@ -1143,6 +1143,11 @@ int MMDB_read_node(const MMDB_s *const mmdb,
     node->left_record_type = record_type(mmdb, node->left_record);
     node->right_record_type = record_type(mmdb, node->right_record);
 
+    if (node->left_record_type == MMDB_RECORD_TYPE_INVALID ||
+        node->right_record_type == MMDB_RECORD_TYPE_INVALID) {
+        return MMDB_CORRUPT_SEARCH_TREE_ERROR;
+    }
+
     // Note that offset will be invalid if the record type is not
     // MMDB_RECORD_TYPE_DATA, but that's ok. Any use of the record entry
     // for other data types is a programming error.
